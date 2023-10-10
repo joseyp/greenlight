@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"greenlight.joseyp.dev/internal/data"
+	"greenlight.joseyp.dev/internal/validator"
 )
 
 func (app *application) createMovieHandler(w http.ResponseWriter, req *http.Request) {
 	var input struct {
 		Title   string       `json:"title"`
-		Year    int          `json:"year"`
+		Year    int32        `json:"year"`
 		Runtime data.Runtime `json:"runtime"`
 		Genres  []string     `json:"genres"`
 	}
@@ -19,6 +20,25 @@ func (app *application) createMovieHandler(w http.ResponseWriter, req *http.Requ
 	err := app.readJSON(w, req, &input)
 	if err != nil {
 		app.badRequestResponse(w, req, err)
+		return
+	}
+
+	movie := &data.Movie{
+		Title:   input.Title,
+		Year:    input.Year,
+		Runtime: input.Runtime,
+		Genres:  input.Genres,
+	}
+
+	v := validator.New()
+
+	if data.ValidateMovie(v, movie); !v.Valid() {
+		app.failedValidationResponse(w, req, v.Errors)
+		return
+	}
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, req, v.Errors)
 		return
 	}
 
